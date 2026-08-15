@@ -1,0 +1,11 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# env
+.env
+
+# seed 산출물
+seed_28days.json
