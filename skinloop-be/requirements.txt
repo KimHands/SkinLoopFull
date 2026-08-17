@@ -4,3 +4,5 @@ pydantic
 sqlalchemy
 psycopg[binary]
 python-dotenv
+httpx
+pytest

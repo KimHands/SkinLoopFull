@@ -36,3 +36,7 @@
 정해진 항목은 여기에 한 줄씩 옮긴다.
 
 - (예) 2026-08-__ Q1: exercise 상한 120으로 통일. DB CHECK·Pydantic·화면 일치.
+- 2026-08-17 A1: BE↔AI는 **HTTP 서비스 분리**. BE가 `AI_SERVICE_URL`로 records를 넘겨 결과 dict 수신. 불가 시 patterns 폴백/whatif 503. 계약은 `skinloop-be/app/analysis/engine.py` docstring.
+- 2026-08-17 A2: 직렬화는 **경계 camelCase / 내부 snake_case**. Pydantic `CamelModel`(alias_generator=to_camel, populate_by_name). 요청은 양쪽 허용, 응답은 by_alias.
+- 2026-08-17 A4/DB: 로컬 P1은 **SQLite 기본**(`DATABASE_URL` 미설정 시), 모델은 Postgres 호환 포터블 타입. 프로덕션 스키마 생성은 사람이 수동(web.md). 테스트는 인메모리 SQLite.
+- 2026-08-17 Q2: skin_score는 **정본 계산식**이 기준. spec §5 예시(4/3/4→54)는 오타, 계산값 47이 정답. 테스트로 고정.
