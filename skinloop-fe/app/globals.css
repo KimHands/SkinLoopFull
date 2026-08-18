@@ -53,19 +53,8 @@ a {
   background: var(--bg);
   padding: 0 22px 94px;
 }
-.mobile-status {
-  display: flex;
-  justify-content: space-between;
-  padding: 20px 4px 7px;
-  font-size: 11px;
-  color: #151318;
-}
-.mobile-status span {
-  color: #6d6667;
-  letter-spacing: 1px;
-}
 .page {
-  padding: 10px 0 22px;
+  padding: 24px 0 22px;
 }
 .stack {
   display: grid;
@@ -760,9 +749,8 @@ textarea.field {
   text-decoration: none;
 }
 .nav-icon {
-  height: 19px;
-  font-size: 18px;
-  line-height: 18px;
+  width: 20px;
+  height: 20px;
 }
 .nav-link.active {
   color: var(--primary-dark);
@@ -770,12 +758,51 @@ textarea.field {
 }
 
 @media (min-width: 768px) {
-  .app-main {
-    max-width: 980px;
-    padding: 0 34px 48px;
+  .app-shell {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
   }
-  .mobile-status {
+  .app-sidebar {
+    position: sticky;
+    top: 0;
+    display: flex;
+    height: 100vh;
+    flex-direction: column;
+    align-items: center;
+    border-right: 1px solid var(--border);
+    background: #fff;
+    padding: 28px 12px;
+  }
+  .brand {
+    margin-bottom: 30px;
+    color: var(--primary-dark);
+  }
+  .brand-full {
     display: none;
+  }
+  .brand-short {
+    font-size: 19px;
+  }
+  .side-nav {
+    display: grid;
+    width: 100%;
+    gap: 10px;
+  }
+  .side-nav .nav-link {
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    padding: 12px 4px;
+  }
+  .side-nav .nav-link.active {
+    background: var(--pale);
+  }
+  .side-nav .nav-label {
+    font-size: 9px;
+  }
+  .app-main {
+    max-width: 1080px;
+    padding: 0 40px 56px;
   }
   .page {
     padding: 36px 0;
@@ -796,11 +823,7 @@ textarea.field {
     grid-column: 1/-1;
   }
   .bottom-nav {
-    position: static;
-    max-width: 680px;
-    margin: 0 auto 24px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
+    display: none;
   }
   .demo-banner {
     margin: 0 -34px;
@@ -811,22 +834,22 @@ textarea.field {
 }
 @media (min-width: 1200px) {
   .app-shell {
-    display: grid;
     grid-template-columns: 220px minmax(0, 1fr);
   }
   .app-sidebar {
     position: sticky;
     top: 0;
-    display: flex;
-    height: 100vh;
-    flex-direction: column;
-    border-right: 1px solid var(--border);
-    background: #fff;
+    align-items: stretch;
     padding: 34px 22px;
   }
   .brand {
     margin-bottom: 34px;
-    color: var(--primary-dark);
+  }
+  .brand-full {
+    display: inline;
+  }
+  .brand-short {
+    display: none;
   }
   .side-nav {
     display: grid;
@@ -840,6 +863,9 @@ textarea.field {
     border-radius: 10px;
     padding: 12px;
     text-align: left;
+    font-size: 12px;
+  }
+  .side-nav .nav-label {
     font-size: 12px;
   }
   .side-nav .nav-link.active {

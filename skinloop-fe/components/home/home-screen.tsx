@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Bell } from "lucide-react";
 import { api, ApiError } from "@/lib/api-client";
 import { useSessionStore } from "@/stores/session-store";
 import { WeeklyProgress } from "./weekly-progress";
@@ -42,7 +43,7 @@ export default function HomeScreen() {
           <p>오늘도 기록했나요?</p>
         </div>
         <span className="bell" aria-hidden="true">
-          ♧
+          <Bell size={16} strokeWidth={1.7} />
         </span>
       </header>
 
