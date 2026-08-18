@@ -23,9 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
-      <body
-        className={`${geistSans.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} antialiased`}>
         {/* 모바일 우선. 데스크톱은 max-width 480px 중앙 정렬 (spec 8절) */}
         <SessionBootstrap>
           <AppFrame>{children}</AppFrame>
