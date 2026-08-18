@@ -1,24 +1,26 @@
 """Pydantic 스키마 (spec §4 / docs/spec/03-types).
 
-직렬화 규칙(A2 확정): BE 내부는 snake_case, API 경계(요청/응답)는 camelCase.
-- CamelModel을 상속하면 alias_generator로 camelCase alias가 붙는다.
-- populate_by_name=True → 요청은 camelCase(alias)/snake_case 둘 다 허용.
-- FastAPI 응답은 기본 by_alias=True → camelCase로 나간다.
+두 계열이 공존한다:
+1) session/records/demo (내 DB 기반) — CamelModel 상속. 경계 camelCase / 내부 snake_case.
+2) patterns/whatif (AI in-process) — 프론트가 records를 body로 직접 보내는 형태.
+   HabitRecord/RecordsPayload/WhatIfRequest. (AI Repo 연동, PR #4)
+
+주석: RecordsPayload는 DB(records)가 완성되면 session 조회 방식으로 바뀔 수 있다(향후 통합).
 """
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
-
-HabitFactor = Literal["sleep_short", "late_snack", "stress", "exercise", "cosmetic_changed"]
 
 
 class CamelModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-# ---- session ----
+# =========================================================================
+# session / records / demo — DB 기반 (경계 camelCase)
+# =========================================================================
 class SessionCreate(CamelModel):
     anon_token: Optional[str] = None
 
@@ -30,7 +32,6 @@ class SessionResponse(CamelModel):
     created_at: datetime
 
 
-# ---- records ----
 class RecordCreate(CamelModel):
     recorded_at: date
     sleep_hours: float = Field(ge=0, le=14)
@@ -67,59 +68,6 @@ class RecordItem(CamelModel):
     memo: Optional[str] = None
 
 
-# ---- patterns ----
-class Impact(CamelModel):
-    factor: HabitFactor
-    label: str
-    impact: float
-    lag: int
-    corr: float
-
-
-class SuggestedExperiment(CamelModel):
-    target_habit: HabitFactor
-    title: str
-    duration_days: int
-
-
-class PatternResponse(CamelModel):
-    confidence: Optional[str] = None
-    record_days: int
-    impacts: list[Impact] = []
-    insight: Optional[str] = None
-    evidence_dates: list[str] = []
-    suggested_experiment: Optional[SuggestedExperiment] = None
-    is_fallback: bool = False
-    model_version: Optional[str] = None
-    reason: Optional[str] = None
-    need_more: Optional[int] = None
-    message: Optional[str] = None
-
-
-# ---- whatif ----
-class WhatIfRequest(CamelModel):
-    target_habit: HabitFactor
-    change_value: float
-
-
-class WhatIfBand(CamelModel):
-    label: str
-    range: dict
-    trend: list[float]
-
-
-class WhatIfResponse(CamelModel):
-    target_habit: HabitFactor
-    label: str
-    current: WhatIfBand
-    changed: WhatIfBand
-    direction: Literal["improve", "worsen", "unclear"]
-    confidence: str
-    message: str
-    disclaimer: str
-
-
-# ---- demo ----
 class DemoResponse(CamelModel):
     loaded: bool
     is_demo: bool
@@ -130,3 +78,65 @@ class DemoResponse(CamelModel):
 
 class DemoClearedResponse(CamelModel):
     cleared: bool
+
+
+# =========================================================================
+# patterns / whatif — AI in-process (프론트가 records를 body로 전송, PR #4)
+# =========================================================================
+class HabitRecord(BaseModel):
+    """일일 기록 하나. DB(records 테이블)가 완성되면 그쪽 필드와 맞춘다."""
+
+    recorded_at: date = Field(..., alias="recordedAt")
+    sleep_hours: float = Field(..., ge=0, le=14, alias="sleepHours")
+    late_snack: bool = Field(..., alias="lateSnack")
+    stress_level: int = Field(..., ge=1, le=5, alias="stressLevel")
+    exercise_min: int = Field(..., ge=0, le=300, alias="exerciseMin")
+    cosmetic_changed: bool = Field(..., alias="cosmeticChanged")
+    skin_score: float = Field(..., ge=20, le=100, alias="skinScore")
+
+    model_config = {"populate_by_name": True}
+
+    def to_ai_dict(self) -> dict:
+        return {
+            "recorded_at": self.recorded_at.isoformat(),
+            "sleep_hours": self.sleep_hours,
+            "late_snack": self.late_snack,
+            "stress_level": self.stress_level,
+            "exercise_min": self.exercise_min,
+            "cosmetic_changed": self.cosmetic_changed,
+            "skin_score": self.skin_score,
+        }
+
+
+class RecordsPayload(BaseModel):
+    """지금은 프론트가 기록을 직접 보내는 형태.
+    DB(records 테이블)가 완성되면, session으로 DB 조회하는 방식으로 바뀔 수 있다."""
+
+    records: list[HabitRecord]
+
+    @field_validator("records")
+    @classmethod
+    def no_duplicate_dates(cls, v: list[HabitRecord]) -> list[HabitRecord]:
+        dates = [r.recorded_at for r in v]
+        if len(dates) != len(set(dates)):
+            raise ValueError("recordedAt에 중복된 날짜가 있습니다.")
+        return v
+
+    def sorted_ai_records(self) -> list[dict]:
+        ordered = sorted(self.records, key=lambda r: r.recorded_at)
+        return [r.to_ai_dict() for r in ordered]
+
+
+TargetHabit = Literal["sleep_short", "late_snack", "stress", "exercise"]
+
+
+class WhatIfRequest(RecordsPayload):
+    target_habit: TargetHabit = Field(..., alias="targetHabit")
+    change_value: float = Field(..., alias="changeValue")
+
+    model_config = {"populate_by_name": True}
+
+
+class ErrorResponse(BaseModel):
+    error: str
+    detail: str

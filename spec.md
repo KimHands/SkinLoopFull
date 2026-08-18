@@ -186,11 +186,11 @@ CREATE INDEX idx_analyses_session ON analyses(session_id, created_at DESC);
 
 ```python
 def calc_skin_score(redness: int, acne: int, oiliness: int) -> int:
-    return round(100 - ((redness + acne + oiliness) / 15 * 100 * 0.8))
+    return round(100 - ((redness + acne + oiliness - 3) / 12 * 80))
 
 ```
 
-입력 (1,1,1) → 84점, (5,5,5) → 20점. 애플리케이션 레이어에서 계산해 저장한다.
+입력 (1,1,1) → 100점, (3,3,3) → 60점, (5,5,5) → 20점. 애플리케이션 레이어에서 계산해 저장한다.
 
 ---
 
@@ -835,7 +835,7 @@ random.seed(42)   # 매번 같은 데이터가 나오도록 고정
 
 
 def skin_score(r, a, o):
-    return round(100 - ((r + a + o) / 15 * 100 * 0.8))
+    return round(100 - ((r + a + o - 3) / 12 * 80))
 
 
 def make_day(i, today):

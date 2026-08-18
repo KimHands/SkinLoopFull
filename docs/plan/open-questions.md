@@ -8,7 +8,7 @@
 | # | 항목 | 충돌 | 상태 |
 | --- | --- | --- | --- |
 | Q1 | `exercise_min` 상한 | DB/Pydantic 0~300 vs 화면 슬라이더 0~120 | 미정 — 실사용상 120이 자연스러움 |
-| Q2 | skin_score 예시 | spec §5 응답 예시(4/3/4→54)가 계산식 결과(41)와 불일치 | 예시 오타로 추정, 식이 정본 |
+| Q2 | skin_score 예시 | spec §5 응답 예시(4/3/4→54)가 계산식 결과(신 식 47)와 불일치 | 예시 오타로 추정, 식이 정본 |
 | Q3 | whatif `late_snack` | bool 평균에 "주당 횟수" 단위를 빼는 처리 애매 | 미정 — 모델 입력 정규화 방식 정해야 |
 | Q4 | whatif `cosmetic_changed` | targetHabit/DELTA에서 제외됨 | 의도 여부 확인 필요 |
 
@@ -36,7 +36,8 @@
 정해진 항목은 여기에 한 줄씩 옮긴다.
 
 - (예) 2026-08-__ Q1: exercise 상한 120으로 통일. DB CHECK·Pydantic·화면 일치.
-- 2026-08-17 A1: BE↔AI는 **HTTP 서비스 분리**. BE가 `AI_SERVICE_URL`로 records를 넘겨 결과 dict 수신. 불가 시 patterns 폴백/whatif 503. 계약은 `skinloop-be/app/analysis/engine.py` docstring.
+- 2026-08-17 A1(폐기): BE↔AI HTTP 분리안 — feat/backend-core 초안. 아래로 대체됨.
+- 2026-08-18 A1(확정): BE↔AI는 **in-process**. patterns/whatif가 `src.habit_pattern`·`src.whatif`를 직접 호출하고 `llm_formatter`로 문장화(PR #4, 김서진). 프론트가 records를 body로 전송(`RecordsPayload`). AI 모듈(`src.*`) 미설치 환경에선 지연 import 가드로 앱은 부팅되고 patterns/whatif만 503. ※ RecordsPayload 주석대로, 추후 DB(records) 기반 session 조회 방식으로 통합 여지.
 - 2026-08-17 A2: 직렬화는 **경계 camelCase / 내부 snake_case**. Pydantic `CamelModel`(alias_generator=to_camel, populate_by_name). 요청은 양쪽 허용, 응답은 by_alias.
 - 2026-08-17 A4/DB: 로컬 P1은 **SQLite 기본**(`DATABASE_URL` 미설정 시), 모델은 Postgres 호환 포터블 타입. 프로덕션 스키마 생성은 사람이 수동(web.md). 테스트는 인메모리 SQLite.
 - 2026-08-17 Q2: skin_score는 **정본 계산식**이 기준. spec §5 예시(4/3/4→54)는 오타, 계산값 47이 정답. 테스트로 고정.

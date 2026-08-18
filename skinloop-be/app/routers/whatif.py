@@ -1,85 +1,39 @@
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import ValidationError
-from sqlalchemy.orm import Session as OrmSession
+from fastapi import APIRouter, HTTPException
 
-from app.analysis import engine
-from app.analysis.frame import MIN_RECORDS, build_frame, load_session_records
-from app.db import get_db
-from app.deps import require_session
-from app.models import Session as SessionModel
-from app.schemas import WhatIfRequest, WhatIfResponse
+from app.schemas import ErrorResponse, WhatIfRequest
 
 router = APIRouter(prefix="/api", tags=["whatif"])
 
 
-def _fmt(value: float) -> str:
-    return str(int(value)) if float(value).is_integer() else str(value)
-
-
-def _label(target_habit: str, change_value: float) -> str:
-    v = _fmt(change_value)
-    return {
-        "sleep_short": f"수면 +{v}시간",
-        "late_snack": f"야식 주 {v}회 줄이기",
-        "stress": f"스트레스 {v}단계 낮추기",
-        "exercise": f"운동 +{v}분",
-    }.get(target_habit, "습관 변경")
-
-
-def _message(label: str, direction: str) -> str:
-    # 표현 규칙(08): 점 추정치·단정 금지, '예측'이 아닌 '유사한 패턴'.
-    if direction == "improve":
-        return f"{label}한 경우, 지금까지 기록에서 좋았던 날들과 유사한 패턴을 보입니다."
-    if direction == "worsen":
-        return f"{label}한 경우, 기록에서 낮았던 날들과 유사한 패턴을 보입니다."
-    return f"{label}한 경우, 뚜렷한 차이는 나타나지 않았습니다."
-
-
-def _service_unavailable() -> HTTPException:
+def _ai_unavailable(detail: str) -> HTTPException:
     return HTTPException(
         status_code=503,
-        detail={"error": "AI_UNAVAILABLE", "message": "분석 서비스를 잠시 사용할 수 없습니다"},
+        detail=ErrorResponse(error="AI_UNAVAILABLE", detail=detail).model_dump(),
     )
 
 
-@router.post("/whatif", response_model=WhatIfResponse)
-def post_whatif(
-    payload: WhatIfRequest,
-    session: SessionModel = Depends(require_session),
-    db: OrmSession = Depends(get_db),
-):
-    """습관 하나를 바꿨을 때의 시나리오 비교. 항상 range로 응답(점추정 금지)."""
-    records = load_session_records(db, session.id)
-    if len(records) < MIN_RECORDS:
+@router.post("/whatif")
+def post_whatif(payload: WhatIfRequest):
+    # AI 모듈(src.*)·LLM 문장화는 AI Repo 소유. 미설치 환경에서도 앱이 부팅되도록 지연 import.
+    try:
+        from src.whatif import run_whatif
+
+        from app.llm_formatter import summarize_whatif
+    except ImportError as exc:
+        raise _ai_unavailable(str(exc))
+
+    try:
+        records = payload.sorted_ai_records()
+        result = run_whatif(
+            records=records,
+            target_habit=payload.target_habit,
+            change_value=payload.change_value,
+        )
+    except ValueError as exc:
         raise HTTPException(
             status_code=400,
-            detail={
-                "error": "NOT_ENOUGH_RECORDS",
-                "message": f"시나리오 비교에는 최소 {MIN_RECORDS}일치 기록이 필요합니다",
-            },
+            detail=ErrorResponse(error="INVALID_INPUT", detail=str(exc)).model_dump(),
         )
 
-    try:
-        result = engine.fetch_whatif(
-            build_frame(records), payload.target_habit, payload.change_value
-        )
-    except engine.AIServiceUnavailable:
-        raise _service_unavailable()
-
-    label = _label(payload.target_habit, payload.change_value)
-    try:
-        return WhatIfResponse(
-            target_habit=payload.target_habit,
-            label=label,
-            current=result["current"],
-            changed=result["changed"],
-            direction=result["direction"],
-            confidence=result["confidence"],
-            message=_message(label, result["direction"]),
-            disclaimer=result.get(
-                "disclaimer", "예측이 아닌 시나리오 비교이며, 실제 결과는 다를 수 있습니다."
-            ),
-        )
-    except (KeyError, TypeError, ValidationError):
-        # AI 응답이 계약과 어긋남 → 503으로 degrade(500 금지). 점추정 응답을 만들지 않는다.
-        raise _service_unavailable()
+    narrative = summarize_whatif(result)
+    return {"result": result, "narrative": narrative}

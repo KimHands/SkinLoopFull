@@ -1,59 +1,38 @@
-from fastapi import APIRouter, Depends
-from pydantic import ValidationError
-from sqlalchemy.orm import Session as OrmSession
+from fastapi import APIRouter, HTTPException
 
-from app.analysis import engine
-from app.analysis.fallback import fallback
-from app.analysis.frame import MIN_RECORDS, build_frame, confidence_for, load_session_records
-from app.db import get_db
-from app.deps import require_session
-from app.models import Session as SessionModel
-from app.schemas import PatternResponse
+from app.schemas import ErrorResponse, RecordsPayload
 
 router = APIRouter(prefix="/api", tags=["patterns"])
 
 
-def _fallback_response(n: int) -> PatternResponse:
-    """AI 서비스 불가/응답 이상 시 impacts 없이 규칙 문장만. 화면이 비지 않게 한다."""
-    fb = fallback([])
-    return PatternResponse(
-        confidence=confidence_for(n),
-        record_days=n,
-        impacts=[],
-        insight=fb["insight"],
-        is_fallback=True,
+def _ai_unavailable(detail: str) -> HTTPException:
+    return HTTPException(
+        status_code=503,
+        detail=ErrorResponse(error="AI_UNAVAILABLE", detail=detail).model_dump(),
     )
 
 
-@router.get("/patterns", response_model=PatternResponse)
-def get_patterns(
-    session: SessionModel = Depends(require_session),
-    db: OrmSession = Depends(get_db),
-):
-    """패턴 분석. <7일이면 기록부족, AI 서비스 실패·응답 이상 시 규칙 폴백."""
-    records = load_session_records(db, session.id)
-    n = len(records)
+@router.post("/patterns")
+def get_patterns(payload: RecordsPayload):
+    # AI 모듈(src.*)·LLM 문장화는 AI Repo 소유. 미설치 환경에서도 앱이 부팅되도록 지연 import.
+    try:
+        from src.habit_pattern import analyze_patterns
 
-    if n < MIN_RECORDS:
-        need = MIN_RECORDS - n
-        return PatternResponse(
-            confidence=None,
-            record_days=n,
-            impacts=[],
-            insight=None,
-            reason="NOT_ENOUGH_RECORDS",
-            need_more=need,
-            message=f"앞으로 {need}일 더 기록하면 패턴 분석이 시작됩니다.",
+        from app.llm_formatter import summarize_habit_pattern
+    except ImportError as exc:
+        raise _ai_unavailable(str(exc))
+
+    try:
+        records = payload.sorted_ai_records()
+        result = analyze_patterns(records)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=ErrorResponse(error="INVALID_INPUT", detail=str(exc)).model_dump(),
         )
 
-    try:
-        result = engine.fetch_patterns(build_frame(records))
-    except engine.AIServiceUnavailable:
-        return _fallback_response(n)
+    narrative = None
+    if result.get("recordDays") is not None and "impacts" in result:
+        narrative = summarize_habit_pattern(result)
 
-    try:
-        result.setdefault("record_days", n)
-        return PatternResponse(**result)
-    except (ValidationError, TypeError, AttributeError):
-        # AI Repo와 스키마가 어긋난 응답 → 폴백으로 degrade(500 금지)
-        return _fallback_response(n)
+    return {"result": result, "narrative": narrative}
