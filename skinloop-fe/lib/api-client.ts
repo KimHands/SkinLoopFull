@@ -11,7 +11,19 @@ import type {
   WhatIfResponse,
 } from "@/types/api";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "") ?? "";
+const configuredApiBase = process.env.NEXT_PUBLIC_API_BASE?.replace(/\/$/, "");
+
+function getApiBase(): string {
+  if (!configuredApiBase) {
+    throw new ApiError(
+      0,
+      "API_BASE_NOT_CONFIGURED",
+      "NEXT_PUBLIC_API_BASE 환경변수를 설정해 주세요.",
+      {},
+    );
+  }
+  return configuredApiBase;
+}
 
 export class ApiError extends Error {
   constructor(
@@ -29,22 +41,32 @@ interface ApiRequestOptions extends RequestInit {
   authenticated?: boolean;
 }
 
-async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+async function apiRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T> {
   const { authenticated = true, headers, ...requestOptions } = options;
   const requestHeaders = new Headers(headers);
   requestHeaders.set("Accept", "application/json");
 
-  if (requestOptions.body) requestHeaders.set("Content-Type", "application/json");
+  if (requestOptions.body)
+    requestHeaders.set("Content-Type", "application/json");
   if (authenticated) requestHeaders.set("X-Anon-Token", getOrCreateAnonToken());
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    response = await fetch(`${getApiBase()}${path}`, {
       ...requestOptions,
       headers: requestHeaders,
     });
-  } catch {
-    throw new ApiError(0, "NETWORK_ERROR", "네트워크 연결을 확인해 주세요.", {});
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(
+      0,
+      "NETWORK_ERROR",
+      "네트워크 연결을 확인해 주세요.",
+      {},
+    );
   }
 
   if (!response.ok) {
