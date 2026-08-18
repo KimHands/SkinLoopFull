@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api, ApiError } from "@/lib/api-client";
 
-export const PATTERN_CACHE_KEY = "skinloop:last-pattern";
+const PATTERN_CACHE_KEY = "skinloop:last-pattern";
 
 export default function AnalyzingPage() {
   const router = useRouter();
