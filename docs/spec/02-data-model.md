@@ -43,11 +43,12 @@ CREATE INDEX        idx_analyses_session     ON analyses(session_id, created_at 
 
 ```python
 def calc_skin_score(redness: int, acne: int, oiliness: int) -> int:
-    return round(100 - ((redness + acne + oiliness) / 15 * 100 * 0.8))
+    return round(100 - ((redness + acne + oiliness - 3) / 12 * 80))
 ```
 
-- (1,1,1) → 84, (5,5,5) → 20. **애플리케이션 레이어에서 계산해 저장.**
-- ⚠️ spec §5의 records 응답 예시(입력 4/3/4 → skinScore 54)는 이 식과 불일치(계산상 41). 예시 오타로 추정 ([open-questions](../plan/open-questions.md)).
+- (1,1,1) → 100, (3,3,3) → 60, (5,5,5) → 20. **애플리케이션 레이어에서 계산해 저장.**
+  (전부 1점(최상)일 때 100, 전부 5점(최악)일 때 20이 되도록 정규화한 식.)
+- ⚠️ spec §5의 records 응답 예시(입력 4/3/4 → skinScore 54)는 이 식과도 불일치(계산상 47). 예시 오타로 추정 ([open-questions](../plan/open-questions.md)).
 
 ## 마이그레이션 규칙
 
