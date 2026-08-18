@@ -1,11 +1,88 @@
-# Pydantic 스키마. 기능 구현 단계에서 spec.md 5절 기준으로 채운다.
-# (RecordCreate, Impact, PatternResponse, WhatIf 등)
+"""Pydantic 스키마 (spec §4 / docs/spec/03-types).
 
-from datetime import date
-from typing import Literal
-from pydantic import BaseModel, Field, field_validator
+두 계열이 공존한다:
+1) session/records/demo (내 DB 기반) — CamelModel 상속. 경계 camelCase / 내부 snake_case.
+2) patterns/whatif (AI in-process) — 프론트가 records를 body로 직접 보내는 형태.
+   HabitRecord/RecordsPayload/WhatIfRequest. (AI Repo 연동, PR #4)
+
+주석: RecordsPayload는 DB(records)가 완성되면 session 조회 방식으로 바뀔 수 있다(향후 통합).
+"""
+from datetime import date, datetime
+from typing import Literal, Optional
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic.alias_generators import to_camel
 
 
+class CamelModel(BaseModel):
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
+# =========================================================================
+# session / records / demo — DB 기반 (경계 camelCase)
+# =========================================================================
+class SessionCreate(CamelModel):
+    anon_token: Optional[str] = None
+
+
+class SessionResponse(CamelModel):
+    session_id: str
+    is_demo: bool
+    total_records: int
+    created_at: datetime
+
+
+class RecordCreate(CamelModel):
+    recorded_at: date
+    sleep_hours: float = Field(ge=0, le=14)
+    late_snack: bool
+    stress_level: int = Field(ge=1, le=5)
+    exercise_min: int = Field(ge=0, le=300, default=0)
+    cosmetic_changed: bool = False
+    skin_redness: int = Field(ge=1, le=5)
+    skin_acne_count: int = Field(ge=1, le=5)
+    skin_oiliness: int = Field(ge=1, le=5)
+    memo: Optional[str] = Field(None, max_length=200)
+
+
+class RecordResponse(CamelModel):
+    record_id: str
+    skin_score: int
+    total_records: int
+    pattern_ready: bool
+    created_at: datetime
+
+
+class RecordItem(CamelModel):
+    record_id: str
+    recorded_at: date
+    sleep_hours: float
+    late_snack: bool
+    stress_level: int
+    exercise_min: int
+    cosmetic_changed: bool
+    skin_redness: int
+    skin_acne_count: int
+    skin_oiliness: int
+    skin_score: int
+    memo: Optional[str] = None
+
+
+class DemoResponse(CamelModel):
+    loaded: bool
+    is_demo: bool
+    record_days: int
+    period: dict
+    message: str
+
+
+class DemoClearedResponse(CamelModel):
+    cleared: bool
+
+
+# =========================================================================
+# patterns / whatif — AI in-process (프론트가 records를 body로 전송, PR #4)
+# =========================================================================
 class HabitRecord(BaseModel):
     """일일 기록 하나. DB(records 테이블)가 완성되면 그쪽 필드와 맞춘다."""
 

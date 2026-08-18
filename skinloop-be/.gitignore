@@ -7,5 +7,12 @@ __pycache__/
 # env
 .env
 
+# 로컬 SQLite / 테스트 캐시
+*.db
+.pytest_cache/
+
+# 정적분석 산출물
+static_analysis_semgrep_*/
+
 # seed 산출물
 seed_28days.json
