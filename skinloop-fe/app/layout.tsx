@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import { SessionBootstrap } from "@/components/session/session-bootstrap";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,9 +31,11 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {/* 모바일 우선. 데스크톱은 max-width 480px 중앙 정렬 (spec 8절) */}
-        <div className="mx-auto min-h-screen w-full max-w-[480px] px-4">
-          {children}
-        </div>
+        <SessionBootstrap>
+          <div className="mx-auto min-h-screen w-full max-w-[480px] px-4">
+            {children}
+          </div>
+        </SessionBootstrap>
       </body>
     </html>
   );
