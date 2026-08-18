@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { SessionBootstrap } from "@/components/session/session-bootstrap";
+import { AppFrame } from "@/components/layout/app-frame";
 
 import "./globals.css";
 
@@ -32,9 +33,7 @@ export default function RootLayout({
       >
         {/* 모바일 우선. 데스크톱은 max-width 480px 중앙 정렬 (spec 8절) */}
         <SessionBootstrap>
-          <div className="mx-auto min-h-screen w-full max-w-[480px] px-4">
-            {children}
-          </div>
+          <AppFrame>{children}</AppFrame>
         </SessionBootstrap>
       </body>
     </html>

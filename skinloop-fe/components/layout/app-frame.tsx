@@ -1,0 +1,4 @@
+"use client";
+import { useSessionStore } from "@/stores/session-store";
+import { AppSidebar,BottomNavigation } from "./app-navigation";
+export function AppFrame({children}:{children:React.ReactNode}) { const isDemo=useSessionStore(s=>s.isDemo); return <div className="app-shell"><AppSidebar/><div><main className="app-main">{isDemo&&<div className="demo-banner">28일치 샘플 데이터 체험 중</div>}{children}</main><BottomNavigation/></div></div> }
