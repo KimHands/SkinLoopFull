@@ -78,6 +78,17 @@ class DemoClearedResponse(CamelModel):
     cleared: bool
 
 
+class ExperimentItem(CamelModel):
+    experiment_id: str
+    target_habit: str
+    title: Optional[str] = None
+    duration_days: int
+    status: Optional[str] = None
+    baseline_score: Optional[float] = None
+    result_score: Optional[float] = None
+    verdict: Optional[str] = None
+
+
 # =========================================================================
 # patterns / whatif — AI in-process
 # 명세(04-api): patterns는 GET, whatif 입력은 {targetHabit, changeValue}.

@@ -2,6 +2,7 @@ import { getOrCreateAnonToken } from "@/lib/anon-token";
 import type {
   ApiErrorBody,
   DemoResponse,
+  ExperimentItem,
   PatternResponse,
   RecordCreateRequest,
   RecordItem,
@@ -112,6 +113,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+
+  getExperiments(): Promise<ExperimentItem[]> {
+    return apiRequest("/api/experiments");
   },
 
   loadDemo(): Promise<DemoResponse> {

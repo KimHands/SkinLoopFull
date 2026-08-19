@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import CORS_ORIGINS
-from app.routers import demo, patterns, records, session, whatif
+from app.routers import demo, experiments, patterns, records, session, whatif
 
 
 def _snake_upper(name: str) -> str:
@@ -64,6 +64,7 @@ app.include_router(records.router)
 app.include_router(patterns.router)
 app.include_router(whatif.router)
 app.include_router(demo.router)
+app.include_router(experiments.router)
 
 
 @app.get("/health")
