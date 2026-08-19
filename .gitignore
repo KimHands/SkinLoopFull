@@ -11,3 +11,6 @@
 .env
 .env.local
 .env.*.local
+
+# SSH 개인키 — 절대 커밋 금지.
+*.pem
