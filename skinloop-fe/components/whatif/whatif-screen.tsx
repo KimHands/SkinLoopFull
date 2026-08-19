@@ -112,8 +112,7 @@ export default function WhatIfScreen() {
           </Link>
           <p className="experiment-hint">14일 동안 이 습관을 기록해봐요</p>
           <div className="disclaimer">
-            {result.disclaimer}
-            <br />본 분석은 통계적 연관성을 보여주는 참고 자료이며 의학적 진단이
+            본 분석은 통계적 연관성을 보여주는 참고 자료이며 의학적 진단이
             아닙니다.
           </div>
         </>
