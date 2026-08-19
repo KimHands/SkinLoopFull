@@ -15,3 +15,22 @@ def load_session_records(db: OrmSession, session_id: int) -> list[Record]:
         .order_by(Record.recorded_at.asc())
         .all()
     )
+
+
+def session_ai_records(db: OrmSession, session_id: int) -> list[dict]:
+    """세션 기록을 AI 모듈 입력 dict(오름차순)으로 변환한다.
+
+    patterns/whatif가 공유. 프론트가 records를 body로 보내는 대신 DB에서 조회한다.
+    """
+    return [
+        {
+            "recorded_at": r.recorded_at.isoformat(),
+            "sleep_hours": r.sleep_hours,
+            "late_snack": r.late_snack,
+            "stress_level": r.stress_level,
+            "exercise_min": r.exercise_min,
+            "cosmetic_changed": r.cosmetic_changed,
+            "skin_score": r.skin_score,
+        }
+        for r in load_session_records(db, session_id)
+    ]
