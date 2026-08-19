@@ -1,9 +1,11 @@
+from contextlib import asynccontextmanager
+import os
+import re
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-
-import re
 
 from app.config import CORS_ORIGINS
 from app.routers import demo, patterns, records, session, whatif
@@ -13,7 +15,19 @@ def _snake_upper(name: str) -> str:
     """camelCase 필드명을 SNAKE_UPPER로 변환. stressLevel → STRESS_LEVEL."""
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).upper()
 
-app = FastAPI(title="SkinLoop API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 로컬/데모 부트스트랩용. 프로덕션 스키마는 사람이 수동 생성한다(web.md).
+    # compose에서만 AUTO_INIT_DB=1로 켠다.
+    if os.getenv("AUTO_INIT_DB") == "1":
+        from app.db import init_db
+
+        init_db()
+    yield
+
+
+app = FastAPI(title="SkinLoop API", version="0.1.0", lifespan=lifespan)
 
 _origins = ["*"] if CORS_ORIGINS.strip() == "*" else [o.strip() for o in CORS_ORIGINS.split(",")]
 app.add_middleware(
