@@ -7,3 +7,9 @@ python-dotenv
 openai
 httpx
 pytest
+
+# AI 계산모듈(src/*) in-process 실행에 필요. Python 3.14에서 검증된 버전으로 고정.
+numpy==2.5.2
+pandas==3.0.5
+scipy==1.18.0
+scikit-learn==1.9.0

@@ -19,11 +19,18 @@ def test_patterns_missing_token_returns_401(client):
     assert client.get("/api/patterns").status_code == 401
 
 
-def test_patterns_reaches_ai_boundary(client, session_token):
-    # 세션·DB 조회를 통과하면 AI 미설치라 503 AI_UNAVAILABLE.
+def test_patterns_happy_path_with_demo(client, session_token):
+    # 데모 28일 시드 → 세션 DB 조회 → AI 계산까지 in-process로 도는 통합 경로.
+    # AI 의존성(numpy/pandas/scipy/scikit-learn)이 설치돼 있어야 통과한다.
+    client.get("/api/demo", headers=HEADERS(session_token))
     resp = client.get("/api/patterns", headers=HEADERS(session_token))
-    assert resp.status_code == 503
-    assert resp.json()["error"] == "AI_UNAVAILABLE"
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["recordDays"] == 28
+    assert body["confidence"] == "high"
+    assert len(body["impacts"]) == 3
+    # 문장화는 OPENAI_API_KEY 없어도 규칙 기반 폴백으로 채워진다.
+    assert body["insight"]
 
 
 def test_whatif_missing_token_returns_401(client):
@@ -31,15 +38,20 @@ def test_whatif_missing_token_returns_401(client):
     assert resp.status_code == 401
 
 
-def test_whatif_requires_no_records_in_body(client, session_token):
-    # records 없이도 검증을 통과해 AI 경계(503)까지 도달한다.
+def test_whatif_happy_path_reads_records_from_session(client, session_token):
+    # body에 records를 넣지 않아도, 세션 DB의 기록으로 시나리오를 계산한다.
+    client.get("/api/demo", headers=HEADERS(session_token))
     resp = client.post(
         "/api/whatif",
-        json={"targetHabit": "sleep_short", "changeValue": 1},
+        json={"targetHabit": "sleep_short", "changeValue": 2},
         headers=HEADERS(session_token),
     )
-    assert resp.status_code == 503
-    assert resp.json()["error"] == "AI_UNAVAILABLE"
+    assert resp.status_code == 200, resp.json()
+    body = resp.json()
+    assert body["current"]["range"]["min"] <= body["current"]["range"]["max"]
+    assert body["changed"]["range"]["min"] <= body["changed"]["range"]["max"]
+    assert body["direction"] in {"improve", "worsen", "unclear"}
+    assert body["disclaimer"]  # 하단 고지 문구 보장(백엔드 setdefault)
 
 
 def test_whatif_missing_target_returns_400(client, session_token):

@@ -13,6 +13,9 @@ from openai import OpenAI
 
 _client: OpenAI | None = None
 
+# F-05: LLM 문장화는 5초 안에 끝나야 한다. 초과·실패 시 규칙 기반 폴백.
+LLM_TIMEOUT_SECONDS = 5.0
+
 
 def _get_client() -> OpenAI:
     global _client
@@ -20,7 +23,8 @@ def _get_client() -> OpenAI:
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
             raise RuntimeError("OPENAI_API_KEY 환경변수가 설정되지 않았습니다.")
-        _client = OpenAI(api_key=api_key)
+        # timeout으로 5초 상한, max_retries=0으로 재시도가 상한을 넘기지 않게.
+        _client = OpenAI(api_key=api_key, timeout=LLM_TIMEOUT_SECONDS, max_retries=0)
     return _client
 
 
