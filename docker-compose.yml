@@ -43,16 +43,25 @@ services:
     depends_on:
       - be
 
-  nginx:
-    image: nginx:stable
+  caddy:
+    image: caddy:2
     restart: unless-stopped
+    environment:
+      # 로컬은 :80(평문). 배포는 도메인 지정 → Caddy 자동 HTTPS.
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      ACME_EMAIL: ${ACME_EMAIL:-admin@skinloop.app}
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       - fe
       - be
 
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:
