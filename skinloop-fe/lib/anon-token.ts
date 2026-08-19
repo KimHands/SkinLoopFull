@@ -6,12 +6,15 @@ function generateUuid(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
-  const bytes = new Uint8Array(16);
-  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-  } else {
-    for (let i = 0; i < 16; i += 1) bytes[i] = Math.floor(Math.random() * 256);
+  // getRandomValues는 http 등 비보안 컨텍스트에서도 모든 지원 브라우저에서 동작한다.
+  // 없으면 예측 가능한 토큰을 조용히 발급하느니 실패한다(fail closed).
+  if (typeof crypto === "undefined" || !crypto.getRandomValues) {
+    throw new Error(
+      "보안 난수원(crypto.getRandomValues)을 사용할 수 없어 익명 토큰을 만들 수 없습니다.",
+    );
   }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
   bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
   bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0"));
