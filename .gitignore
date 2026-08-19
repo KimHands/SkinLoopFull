@@ -6,3 +6,8 @@
 
 # Local integration test runtime
 .tmp/
+
+# 환경변수(비밀 포함) — 커밋 금지. 예시는 .env.example.
+.env
+.env.local
+.env.*.local
