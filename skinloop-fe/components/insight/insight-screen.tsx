@@ -5,20 +5,30 @@ import { api } from "@/lib/api-client";
 import type { PatternResponse } from "@/types/api";
 
 const CACHE = "skinloop:last-pattern";
-const confidence = { low: "낮음", medium: "medium", high: "높음" };
+const confidence = { low: "낮음", medium: "보통", high: "높음" };
 export default function InsightScreen() {
   const [data, setData] = useState<PatternResponse | null>(null);
+  const [scoreByDate, setScoreByDate] = useState<Record<string, number>>({});
   const [error, setError] = useState("");
   useEffect(() => {
     const cached = sessionStorage.getItem(CACHE);
     if (cached) {
       setData(JSON.parse(cached));
-      return;
+    } else {
+      api
+        .getPatterns()
+        .then(setData)
+        .catch(() => setError("인사이트를 불러오지 못했어요."));
     }
+    // 근거 날짜의 실제 피부 점수를 붙이기 위해 기록을 함께 불러온다.
     api
-      .getPatterns()
-      .then(setData)
-      .catch(() => setError("인사이트를 불러오지 못했어요."));
+      .getRecords()
+      .then((rows) => {
+        const map: Record<string, number> = {};
+        for (const row of rows) map[row.recordedAt] = row.skinScore;
+        setScoreByDate(map);
+      })
+      .catch(() => {});
   }, []);
   if (error)
     return (
@@ -101,18 +111,23 @@ export default function InsightScreen() {
         <section className="card">
           <h2 className="section-title">왜 이렇게 분석됐나요?</h2>
           <div className="evidence-list">
-            {data.evidenceDates.slice(0, 3).map((date, index) => (
-              <div key={date}>
-                <strong>{date}</strong>
-                <span>
-                  {impacts[index % Math.max(impacts.length, 1)]?.label ??
-                    "생활 기록"}
-                </span>
-                <b>
-                  {58 + index}~{64 + index}
-                </b>
-              </div>
-            ))}
+            {data.evidenceDates.slice(0, 3).map((date, index) => {
+              const score = scoreByDate[date];
+              return (
+                <div key={date}>
+                  <strong>{date}</strong>
+                  <span>
+                    {impacts[index % Math.max(impacts.length, 1)]?.label ??
+                      "생활 기록"}
+                  </span>
+                  {score != null && (
+                    <b>
+                      {Math.max(0, score - 3)}~{Math.min(100, score + 3)}
+                    </b>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <p className="caption">
             점수가 낮았던 날의 생활 기록을 함께 비교했어요.

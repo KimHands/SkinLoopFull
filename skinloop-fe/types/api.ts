@@ -99,6 +99,17 @@ export interface DemoResponse {
   message: string;
 }
 
+export interface ExperimentItem {
+  experimentId: string;
+  targetHabit: HabitFactor;
+  title: string | null;
+  durationDays: number;
+  status: string | null;
+  baselineScore: number | null;
+  resultScore: number | null;
+  verdict: string | null;
+}
+
 export interface ApiErrorBody {
   error?: string;
   message?: string;

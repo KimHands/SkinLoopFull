@@ -4,14 +4,21 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api-client";
 import { useSessionStore } from "@/stores/session-store";
-import type { RecordItem } from "@/types/api";
+import type { ExperimentItem, RecordItem } from "@/types/api";
 import { RecordsCalendar } from "./records-calendar";
+
+const scoreBand = (score: number | null) => {
+  if (score == null) return "기록 없음";
+  const rounded = Math.round(score);
+  return `${Math.max(0, rounded - 3)}~${Math.min(100, rounded + 3)}`;
+};
 
 export default function RecordsScreen() {
   const router = useRouter();
   const isDemo = useSessionStore((state) => state.isDemo);
   const setDemo = useSessionStore((state) => state.setDemoMode);
   const [records, setRecords] = useState<RecordItem[]>([]);
+  const [experiments, setExperiments] = useState<ExperimentItem[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
@@ -25,6 +32,10 @@ export default function RecordsScreen() {
             : "기록을 불러오지 못했어요.",
         ),
       );
+    api
+      .getExperiments()
+      .then(setExperiments)
+      .catch(() => {});
   }, []);
   async function clearDemo() {
     if (!window.confirm("샘플 기록 28일과 샘플 실험 결과를 삭제할까요?"))
@@ -87,25 +98,27 @@ export default function RecordsScreen() {
           </div>
         </div>
       </section>
-      {isDemo && (
-        <section className="card result-card">
+      {experiments.map((exp) => (
+        <section className="card result-card" key={exp.experimentId}>
           <div className="section-heading">
             <strong>실험 결과</strong>
-            <span>수면 +1시간 · 14일</span>
+            <span>
+              {exp.title ?? exp.targetHabit} · {exp.durationDays}일
+            </span>
           </div>
-          <p>실험 전 7일과 실험 중 14일의 경향을 비교했어요.</p>
+          <p>실험 전과 실험 기간의 경향을 비교했어요.</p>
           <div className="range-grid">
             <div>
               <span>실험 전</span>
-              <strong>52~58</strong>
+              <strong>{scoreBand(exp.baselineScore)}</strong>
             </div>
             <div>
               <span>실험 중</span>
-              <strong>60~66</strong>
+              <strong>{scoreBand(exp.resultScore)}</strong>
             </div>
           </div>
         </section>
-      )}
+      ))}
       {records.length > 0 && (
         <section className="card">
           <h2 className="section-title">최근 기록</h2>

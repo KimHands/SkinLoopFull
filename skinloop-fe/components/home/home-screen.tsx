@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { api, ApiError } from "@/lib/api-client";
 import { useSessionStore } from "@/stores/session-store";
+import type { RecordItem } from "@/types/api";
 import { WeeklyProgress } from "./weekly-progress";
 
 export default function HomeScreen() {
@@ -15,8 +16,23 @@ export default function HomeScreen() {
   const setDemo = useSessionStore((state) => state.setDemoMode);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [records, setRecords] = useState<RecordItem[]>([]);
   const need = Math.max(0, 7 - total);
   const ready = total >= 7;
+
+  useEffect(() => {
+    if (!ready) return;
+    api
+      .getRecords()
+      .then(setRecords)
+      .catch(() => {});
+  }, [ready]);
+
+  const scores = records.map((item) => item.skinScore);
+  const latestScore = scores.length ? scores[scores.length - 1] : null;
+  const recentScores = scores.slice(-7);
+  const lowScore = recentScores.length ? Math.min(...recentScores) : null;
+  const highScore = recentScores.length ? Math.max(...recentScores) : null;
 
   async function loadDemo() {
     setBusy(true);
@@ -51,12 +67,16 @@ export default function HomeScreen() {
         <>
           <section className="card score-card">
             <div className="score-ring">
-              <span>71</span>
+              <span>{latestScore ?? "…"}</span>
             </div>
             <div className="score-copy">
-              <span className="caption">오늘 예상 점수</span>
-              <strong>68 ~ 74</strong>
-              <p>어제와 비슷한 흐름이에요</p>
+              <span className="caption">최근 점수</span>
+              <strong>
+                {lowScore != null && highScore != null
+                  ? `${lowScore} ~ ${highScore}`
+                  : "불러오는 중"}
+              </strong>
+              <p>최근 7일 점수 범위예요</p>
             </div>
             <Link className="btn btn-primary btn-block" href="/record">
               기록하기
@@ -65,7 +85,7 @@ export default function HomeScreen() {
           <Link href="/insight" className="card insight-teaser">
             <div>
               <strong>새 인사이트가 준비됐어요</strong>
-              <span>최근 12일 기록 기준</span>
+              <span>최근 {total}일 기록 기준</span>
             </div>
             <b>인사이트 보기</b>
           </Link>
